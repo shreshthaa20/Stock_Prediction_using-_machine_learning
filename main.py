@@ -99,6 +99,18 @@ def run_ticker(ticker: str) -> dict:
 
     preds = {"ANN": ann_pred, "RFR": rfr_pred, "LSTM": lstm_pred}
 
+    # Save predictions to disk for Streamlit to load instantly
+    import pandas as pd
+    pred_df = pd.DataFrame({
+        "Actual": actual,
+        "ANN": ann_pred,
+        "RFR": rfr_pred,
+        "LSTM": lstm_pred
+    })
+    pred_csv_path = os.path.join(cfg.OUTPUT_DIR, f"{ticker}_predictions.csv")
+    pred_df.to_csv(pred_csv_path, index=False)
+    log.info("Saved predictions -> %s", pred_csv_path)
+
     # Step 8 — Metrics
     results = {name: metrics(actual, pred) for name, pred in preds.items()}
     print_table(ticker, results)

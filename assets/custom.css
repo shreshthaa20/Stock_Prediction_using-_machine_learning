@@ -180,3 +180,17 @@ div[role="combobox"] {
     border-radius: 0.5rem;
     padding: 0.5rem;
 }
+
+/* ── Plotly modebar & interactive tools ──────────────────────────────────── */
+.js-plotly-plot .plotly .modebar {
+    background: rgba(30, 41, 59, 0.85) !important;
+    border-radius: 6px;
+    padding: 2px 6px;
+    border: 1px solid rgba(0, 200, 150, 0.2);
+}
+.js-plotly-plot .plotly .modebar-btn svg path {
+    fill: #00C896 !important;
+}
+.js-plotly-plot .plotly .modebar-btn:hover svg path {
+    fill: #40E0D0 !important;
+}

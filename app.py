@@ -48,15 +48,38 @@ MODEL_COLORS = {
 }
 FEATURE_COLS = ["Open", "High", "Low", "Close", "Volume", "SMA", "RSI"]
 
-DEPLOYED_URL = "https://shreshthaa20-stock-prediction-app-lzbq5n.streamlit.app/"
 
+# ─── Plotly helper functions & Interactive Controls ─────────────────────────
 
-# ─── Plotly helper functions ─────────────────────────────────────────────────
+PLOTLY_CONFIG = {
+    "scrollZoom": False,
+    "displayModeBar": True,
+    "displaylogo": False,
+    "modeBarButtonsToRemove": [
+        "zoom2d", "pan2d", "drawline", "drawopenpath", "eraseshape", "resetScale2d",
+    ],
+    "toImageButtonOptions": {
+        "format": "png",
+        "filename": "stocksight_chart",
+        "height": 500,
+        "width": 1000,
+        "scale": 2,
+    },
+    "responsive": True,
+}
+COMPARISON_PLOTLY_CONFIG = {
+    **PLOTLY_CONFIG,
+    "modeBarButtonsToRemove": [
+        *PLOTLY_CONFIG["modeBarButtonsToRemove"],
+        "select2d", "lasso2d", "autoScale2d",
+    ],
+}
+
 
 def plotly_prediction_chart(x_axis, actual, predictions_dict, title, show_flags=None):
     """
     Interactive Plotly line chart: Actual vs one or more model predictions.
-    show_flags is a dict like {"ANN": True, "RFR": False, "LSTM": True}.
+    Displays actual values alongside one or more model predictions.
     """
     fig = go.Figure()
     fig.add_trace(go.Scatter(
@@ -78,8 +101,19 @@ def plotly_prediction_chart(x_axis, actual, predictions_dict, title, show_flags=
         ))
     fig.update_layout(
         title=dict(text=title, font=dict(size=16, color="#F8FAFC")),
-        xaxis_title="Trading Days (Test Set)",
-        yaxis_title="Price (USD)",
+        xaxis=dict(
+            title="Trading Days (Test Set)",
+            fixedrange=True,
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+        ),
+        yaxis=dict(
+            title="Price (USD)",
+            fixedrange=True,
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+        ),
+        dragmode=False,
         template="plotly_dark",
         hovermode="x unified",
         legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -91,7 +125,7 @@ def plotly_prediction_chart(x_axis, actual, predictions_dict, title, show_flags=
 
 
 def plotly_single_model_chart(x_axis, actual, pred, model_name, color):
-    """Interactive Plotly chart for a single model tab."""
+    """Plotly chart for a single model tab."""
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=x_axis, y=actual, mode="lines", name="Actual",
@@ -104,8 +138,19 @@ def plotly_single_model_chart(x_axis, actual, pred, model_name, color):
     fig.update_layout(
         title=dict(text=f"{model_name} Forecast vs Actual",
                    font=dict(size=15, color="#F8FAFC")),
-        xaxis_title="Trading Days",
-        yaxis_title="Price (USD)",
+        xaxis=dict(
+            title="Trading Days",
+            fixedrange=True,
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+        ),
+        yaxis=dict(
+            title="Price (USD)",
+            fixedrange=True,
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+        ),
+        dragmode=False,
         template="plotly_dark",
         hovermode="x unified",
         legend=dict(bgcolor="rgba(0,0,0,0)"),
@@ -117,7 +162,7 @@ def plotly_single_model_chart(x_axis, actual, pred, model_name, color):
 
 
 def plotly_residual_chart(x_axis, residuals, model_name, pos_color, neg_color):
-    """Interactive Plotly bar chart for residual analysis."""
+    """Plotly bar chart for residual analysis."""
     colors = [pos_color if r >= 0 else neg_color for r in residuals]
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -128,8 +173,19 @@ def plotly_residual_chart(x_axis, residuals, model_name, pos_color, neg_color):
     fig.update_layout(
         title=dict(text=f"Residual Analysis ({model_name})",
                    font=dict(size=14, color="#F8FAFC")),
-        xaxis_title="Trading Days",
-        yaxis_title="Actual − Predicted",
+        xaxis=dict(
+            title="Trading Days",
+            fixedrange=True,
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+        ),
+        yaxis=dict(
+            title="Actual − Predicted",
+            fixedrange=True,
+            showgrid=True,
+            gridcolor="rgba(255,255,255,0.08)",
+        ),
+        dragmode=False,
         template="plotly_dark",
         plot_bgcolor="#0A192F",
         paper_bgcolor="#0A192F",
@@ -157,6 +213,7 @@ def plotly_comparison_bar_chart(summary_df):
         plot_bgcolor="#0A192F",
         paper_bgcolor="#0A192F",
         margin=dict(l=20, r=20, t=40, b=20),
+        dragmode=False,
     )
     return fig
 
@@ -415,7 +472,7 @@ def prepare_uploaded_data(uploaded_file, selected_target=None):
     valid_numeric_cols = []
     for col in df.columns:
         s = _clean_numeric_series(df[col])
-        if s.notna().sum() >= max(20, len(df) * 0.3):
+        if s.notna().sum() >= min(3, len(df)):
             cleaned_series_dict[col] = s
             valid_numeric_cols.append(col)
 
@@ -544,7 +601,11 @@ def show_all_companies_comparison():
         return
 
     # Interactive Plotly chart
-    st.plotly_chart(plotly_comparison_bar_chart(summary_df), use_container_width=True)
+    st.plotly_chart(
+        plotly_comparison_bar_chart(summary_df),
+        use_container_width=True,
+        config=COMPARISON_PLOTLY_CONFIG,
+    )
     st.caption(
         "This graph compares ANN, Random Forest, and LSTM for every company. "
         "Lower MAE, RMSE, and MAPE values mean better prediction accuracy."
@@ -747,7 +808,7 @@ def show_upload_studio(show_ann, show_rfr, show_lstm):
                 f"Multi-Model Forecast vs Actual ({chosen_target})",
                 show_flags=show_flags,
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
         with tab_metrics:
             st.subheader(f"📋 Model Evaluation Metrics ({chosen_target})")
@@ -821,14 +882,9 @@ with st.sidebar:
 
     st.divider()
 
-    # ---- Model toggles ----
-    st.markdown("##### 🧠 Models to display")
-    show_ann = st.checkbox("ANN (Neural Net)", value=True,
-                           help="Feed‑forward artificial neural network")
-    show_rfr = st.checkbox("RFR (Random Forest)", value=True,
-                           help="Tree‑based ensemble with GridSearch tuning")
-    show_lstm = st.checkbox("LSTM (Sequence)", value=True,
-                            help="Long Short‑Term Memory recurrent network")
+    show_ann = True
+    show_rfr = True
+    show_lstm = True
 
     st.divider()
 
@@ -902,10 +958,19 @@ offset = cfg.SEQUENCE_LEN
 actual = inverse_scale(y_scaler, y_test[offset:])
 x_axis = list(range(len(actual)))
 
-with st.spinner("Running Predictions..."):
-    ann_pred = inverse_scale(y_scaler, ann.predict(X_test[offset:], verbose=0).flatten())
-    rfr_pred = inverse_scale(y_scaler, rfr.predict(X_test[offset:]))
-    lstm_pred = inverse_scale(y_scaler, lstm.predict(X_test_seq, verbose=0).flatten())
+pred_csv_path = os.path.join(cfg.OUTPUT_DIR, f"{ticker}_predictions.csv")
+
+if os.path.exists(pred_csv_path):
+    with st.spinner("Loading Saved Predictions..."):
+        pred_df = pd.read_csv(pred_csv_path)
+        ann_pred = pred_df["ANN"].values
+        rfr_pred = pred_df["RFR"].values
+        lstm_pred = pred_df["LSTM"].values
+else:
+    with st.spinner("Running Predictions (Fallback)..."):
+        ann_pred = inverse_scale(y_scaler, ann.predict(X_test[offset:], verbose=0).flatten())
+        rfr_pred = inverse_scale(y_scaler, rfr.predict(X_test[offset:]))
+        lstm_pred = inverse_scale(y_scaler, lstm.predict(X_test_seq, verbose=0).flatten())
 
 predictions = {
     "ANN": ann_pred,
@@ -934,7 +999,7 @@ with tab_comp:
         f"All Models vs Actual — {ticker}",
         show_flags=show_flags,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
     st.markdown("""
     **Graph Explanation:**
@@ -946,7 +1011,7 @@ with tab_comp:
 
     *Look for which model line tracks the actual price line most closely, especially during sharp trends or sudden reversals.*
 
-    💡 **Tip:** Hover over the chart to see exact values. Use the zoom and pan tools to focus on specific date ranges.
+    💡 **Tip:** Hover over the chart to see exact values. Use mouse-wheel or zoom/pan tools in the top-right toolbar.
     """)
 
     st.subheader("📋 Performance Metrics Summary Table")
@@ -995,7 +1060,7 @@ with tab_ann:
     m3.metric("ANN MAPE", f"{ann_metrics['MAPE']:.2f}%")
 
     fig = plotly_single_model_chart(x_axis, actual, predictions["ANN"], "ANN", MODEL_COLORS["ANN"])
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
     st.markdown("""
     **Graph Explanation:**
@@ -1005,7 +1070,7 @@ with tab_ann:
     st.subheader("Residual Analysis (ANN)")
     residuals = actual - predictions["ANN"]
     fig = plotly_residual_chart(x_axis, residuals, "ANN", "#059669", "#DC2626")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
     st.markdown("""
     **Residuals Explanation:**
     Residuals represent the prediction error (Actual minus Predicted). Green bars indicate the model under-predicted (actual was higher), while red bars indicate over-prediction (actual was lower). The ideal model has small bars hovering close to zero.
@@ -1036,7 +1101,7 @@ with tab_rfr:
     m3.metric("RFR MAPE", f"{rfr_metrics['MAPE']:.2f}%")
 
     fig = plotly_single_model_chart(x_axis, actual, predictions["RFR"], "RFR", MODEL_COLORS["RFR"])
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
     st.markdown("""
     **Graph Explanation:**
@@ -1046,7 +1111,7 @@ with tab_rfr:
     st.subheader("Residual Analysis (RFR)")
     residuals = actual - predictions["RFR"]
     fig = plotly_residual_chart(x_axis, residuals, "RFR", "#059669", "#DC2626")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
     st.markdown("""
     **Residuals Explanation:**
     Residuals represent the prediction error (Actual minus Predicted). Green bars indicate the model under-predicted, while red bars indicate over-prediction.
@@ -1077,7 +1142,7 @@ with tab_lstm:
     m3.metric("LSTM MAPE", f"{lstm_metrics['MAPE']:.2f}%")
 
     fig = plotly_single_model_chart(x_axis, actual, predictions["LSTM"], "LSTM", MODEL_COLORS["LSTM"])
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
     st.markdown("""
     **Graph Explanation:**
@@ -1087,7 +1152,7 @@ with tab_lstm:
     st.subheader("Residual Analysis (LSTM)")
     residuals = actual - predictions["LSTM"]
     fig = plotly_residual_chart(x_axis, residuals, "LSTM", "#059669", "#DC2626")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
     st.markdown("""
     **Residuals Explanation:**
     Residuals represent the prediction error (Actual minus Predicted). Green bars indicate the model under-predicted, while red bars indicate over-prediction.
@@ -1109,15 +1174,11 @@ with tab_lstm:
 
 st.markdown("---")
 st.markdown(
-    f"""
+    """
     <div class="footer">
-        © 2026 <strong>StockSight</strong> — Multi‑Model Stock Prediction Dashboard<br/>
-        <a href="{DEPLOYED_URL}" target="_blank">🌐 Live Demo</a> •
-        <a href="https://github.com/shreshthaa20/Stock_Prediction_using-_machine_learning" target="_blank">
-            <img src="https://img.shields.io/github/stars/shreshthaa20/Stock_Prediction_using-_machine_learning?style=social"
-                 alt="GitHub stars" style="vertical-align:middle;">
-        </a>
+        &copy; 2026 <strong>StockSight</strong> &mdash; Multi-Model Financial &amp; Time-Series Forecasting Platform
     </div>
     """,
     unsafe_allow_html=True,
 )
+

@@ -183,7 +183,7 @@ def train_lstm(X_train_seq: np.ndarray, y_train_seq: np.ndarray):
 
 # ─── Save & Load ─────────────────────────────────────────────────────────────
 
-
+def save_models(rfr, ann, lstm, ticker: str) -> None:
     """
     Saves all 3 trained models to disk inside saved_models/<ticker>/.
 
@@ -199,7 +199,6 @@ def train_lstm(X_train_seq: np.ndarray, y_train_seq: np.ndarray):
     ANN  → .keras (TensorFlow's native format)
     LSTM → .keras (TensorFlow's native format)
     """
-def save_models(rfr, ann, lstm, ticker: str) -> None:
     folder = os.path.join("saved_models", ticker)
     os.makedirs(folder, exist_ok=True)
 
